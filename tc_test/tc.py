@@ -20,7 +20,7 @@ except:
 # to ping requests
 # fi = b.load_func("tc_drop", BPF.SCHED_CLS)
 # fi = b.load_func("tc_drop_ping", BPF.SCHED_CLS)
-fi = b.load_func("tc_pingpong", BPF.SCHED_CLS)
+fi = b.load_func("socket_filter", BPF.SCHED_CLS)
 
 ipr.tc("add-filter", "bpf", idx, ":1", fd=fi.fd,
         name=fi.name, parent="ffff:", action="ok", classid=1, da=True)
