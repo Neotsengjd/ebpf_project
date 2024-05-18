@@ -5,7 +5,8 @@
 typedef unsigned long uintptr_t;
 
 
-#define cursor_advance(_cursor, _len) \ ({ void *_tmp = _cursor; _cursor += _len; _tmp; })
+#define cursor_advance(_cursor, _len) \
+  ({ void *_tmp = _cursor; _cursor += _len; _tmp; })
 
 typedef unsigned char u8;
 typedef unsigned short u16;

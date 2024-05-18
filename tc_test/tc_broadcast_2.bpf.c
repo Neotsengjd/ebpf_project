@@ -12,13 +12,18 @@ typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
 
-
+#define MAX_LEN 40
 #define IP_TCP 6
 #define ETH_SIZE sizeof(struct ethhdr)
 #define IP_SIZE sizeof(struct iphdr)
 #define TCP_SIZE sizeof(struct tcphdr)
 
-static __always_inline  struct tcphdr* try_parse_tcphdr(void* data, void* data_end){
+struct addr{
+        u8 ip[4];
+        u16 port;
+};
+
+static __always_inline struct tcphdr* try_parse_tcphdr(void* data, void* data_end){
         if(data + ETH_SIZE > data_end)
                 return 0;
         struct ethhdr*  ethhdr = data;
@@ -41,6 +46,60 @@ static __always_inline  struct tcphdr* try_parse_tcphdr(void* data, void* data_e
         return data + ETH_SIZE + IP_SIZE;
 }
 
+//59123
+#define IS_MAGIC_NUM(str) (str[0] == '5' && str[1] == '9' && str[2] == '1' && str[3] == '2' && str[4] == '3')
+
+
+static __always_inline  void broad_cast(struct __sk_buff *skb, struct tcphdr *tcphdr,char* payload, char* str){
+
+        u16 origin_port = tcphdr->source;
+        u8 n = (u8) str[0];
+        bpf_trace_printk("[tc] received %d from %d to %d\n", n, origin_port, tcphdr->dest);
+        //return;
+
+
+
+
+        if(skb->data_end > payload + 4){
+                bpf_trace_printk("update payload\n");
+                payload[0] = 'H';
+                payload[1] = 'I';
+                payload[2] = '!';
+                payload[3] = '\0';
+        }
+       
+        
+
+        for(int i=0;i<3;i++){
+                if( (i*6+4 >= MAX_LEN-6)) {
+                        break;
+                }
+                if(i >= n) continue;
+
+                u8 a = str[i*6 + 1];
+                u8 b = str[i*6 + 2];
+                u8 c = str[i*6 + 3];
+                u8 d = str[i*6 + 4];
+		str[i*6 + 4] = (u8)2;
+		bpf_trace_printk("================");
+		bpf_trace_printk("%u %u\n", a, b);
+		bpf_trace_printk("%u %u\n", c, d);
+		bpf_trace_printk("================");
+                u8 b_port[2];
+                b_port[0] = str[i*6+5];
+                b_port[1] = str[i*6+6];
+
+                u16 port = *b_port;
+                bpf_trace_printk("[tc] redirecting to %d\n", port);
+                bpf_skb_store_bytes(skb, ETH_SIZE + offsetof(struct iphdr, saddr), &str[i*6 + 1], 4, 0);
+		u8 dst_ip[4];
+		bpf_skb_load_bytes(skb, ETH_SIZE + offsetof(struct iphdr, saddr), dst_ip, 4);
+		bpf_trace_printk("%u\n", dst_ip[3]);
+                //bpf_skb_store_bytes(skb, ETH_SIZE + IP_SIZE + offsetof(struct tcphdr, dest), &port, 2, 0);
+                bpf_clone_redirect(skb, skb->ifindex, 0);
+        }
+        return;
+}
 
 
 int socket_filter(struct __sk_buff *skb) {
@@ -77,20 +136,38 @@ int socket_filter(struct __sk_buff *skb) {
         bpf_trace_printk("%x", data+payload_offset);
         char* payload = (char *)(data + payload_offset);
 
-        #define MAX_LEN 20
+        
         char str[MAX_LEN] = {0};
         
         for (int i=0;i<MAX_LEN; i++){
                 if(payload + i+1 < (char*) data_end){
                         str[i] = payload[i];
+			bpf_trace_printk("%d\n", str[i]);
+
                 }
                 else{
                         str[i] = '\0';
                         break;
                 }
         }
+	bpf_trace_printk("%u\n", str[6] - '0');
 
         str[MAX_LEN-1] = '\0';
-        bpf_trace_printk("[tc] payload: %s\n", str);
+
+        int should_process = IS_MAGIC_NUM(str);
+	bpf_trace_printk("%d\n", should_process);
+ if(!should_process){
+  return TC_ACT_OK; 
+ }
+ switch(skb, str[5]){
+  case 'b':
+   broad_cast(skb, tcphdr, data+payload_offset, str+7);
+   return TC_ACT_SHOT;
+  default:
+   return TC_ACT_OK;
+ }
+        
+ //bpf_trace_printk("[tc] payload: %s\n", str);
+
         return TC_ACT_OK;
 }
