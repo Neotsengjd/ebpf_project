@@ -8,7 +8,7 @@ s = socket.socket()         # 创建 socket 对象
 port = 12345     # 设置端口号
 
 
-s.connect(('127.0.0.1', port))
+s.connect(('127.0.0.2', port))
 s.send(b"hi")
 while True:
     try:
