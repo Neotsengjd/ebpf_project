@@ -5,7 +5,7 @@ import os
 from time import sleep
 from pyroute2 import IPRoute
 
-b = BPF(src_file="tc_broadcast_mod.bpf.c")
+b = BPF(src_file="tc_broadcast_mod2.bpf.c")
 
 ipr = IPRoute()
 links = ipr.link_lookup(ifname="lo")
