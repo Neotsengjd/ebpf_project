@@ -20,3 +20,4 @@ ip.tc("add-filter", "bpf", idx, ":1", fd=fn.fd, name=fn.name,
       parent="ffff:fff3", classid=1, direct_action=True)
 
 print("BPF tc functionality - SCHED_CLS: OK")
+

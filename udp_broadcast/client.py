@@ -1,7 +1,7 @@
 import socket
 
 HOST = socket.gethostname()
-PORT = 12346
+PORT = 12345
 server_addr = (HOST, PORT)
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
