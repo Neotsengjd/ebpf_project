@@ -8,7 +8,7 @@ bpf = BPF(src_file="tc.bpf.c")
 
 
 fn = bpf.load_func("socket_filter", BPF.SCHED_CLS)
-#fn = bpf.load_func("xdp_prog", BPF.XDP)
+
 
 ip = pyroute2.IPRoute()
 ipdb = pyroute2.IPDB(nl=ip)

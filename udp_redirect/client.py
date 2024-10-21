@@ -1,6 +1,6 @@
 import socket
 
-HOST = socket.gethostname()
+HOST = '127.0.0.1'
 PORT = 12346
 server_addr = (HOST, PORT)
 
