@@ -113,30 +113,44 @@ typedef unsigned int u32;
 #define UDP_SIZE sizeof(struct udphdr)
 
 static __always_inline struct udphdr* try_parse_udphdr(void* data, void* data_end) {
-    if (data + ETH_SIZE > data_end)
+    if (data + ETH_SIZE > data_end){
+	bpf_trace_printk("Failed1");
         return 0;
+	}
     struct ethhdr* ethhdr = data;
+    bpf_trace_printk("ethhdr%d", ethhdr);
 
-    if (bpf_ntohs(ethhdr->h_proto) != ETH_P_IP)
+    if (bpf_ntohs(ethhdr->h_proto) != ETH_P_IP){
+	bpf_trace_printk("Failed2");
         return 0;
-
-    if (data + ETH_SIZE + IP_SIZE > data_end)
+}
+    if (data + ETH_SIZE + IP_SIZE > data_end){
+	bpf_trace_printk("Failed3");
         return 0;
-
+}
     struct iphdr* iphdr = data + ETH_SIZE;
+    bpf_trace_printk("iphdr%d", iphdr);
 
-    if (iphdr->protocol != IP_UDP)
+    if (iphdr->protocol != IP_UDP){
+	bpf_trace_printk("protocal%d", iphdr->protocol);
+	bpf_trace_printk("Failed4");
         return 0;
+}
 
-    if (data + ETH_SIZE + IP_SIZE + UDP_SIZE > data_end)
+    if (data + ETH_SIZE + IP_SIZE + UDP_SIZE > data_end){
+	bpf_trace_printk("Failed5");
         return 0;
-
+	}
+    bpf_trace_printk("success");
     return data + ETH_SIZE + IP_SIZE; 
 }
 
 static __always_inline void redirect(struct __sk_buff *skb, struct udphdr* udphdr, struct iphdr* iphdr) {
     u32 new_dest_ip = bpf_htonl((127 << 24) | (0 << 16) | (0 << 8) | 1); //new ip address 127.0.0.1
-
+    u32 bload_daddr;
+    bpf_skb_load_bytes(skb, ETH_SIZE + offsetof(struct iphdr, daddr), &bload_daddr, sizeof(bload_daddr));
+    bpf_trace_printk("before: %d\n", bload_daddr);
+	
     // new ip address to skb
     int ret = bpf_skb_store_bytes(skb, ETH_SIZE + offsetof(struct iphdr, daddr), &new_dest_ip, sizeof(new_dest_ip), BPF_F_RECOMPUTE_CSUM);
     if (ret < 0) {
@@ -159,9 +173,14 @@ int socket_filter(struct __sk_buff *skb) {
     long result = bpf_skb_pull_data(skb, skb->len);
     void *data = (void*) skb->data;
     void *data_end = (void*) skb->data_end;
+    
+    bpf_trace_printk("dccccccccccc");
 
     struct udphdr* udphdr = try_parse_udphdr(data, data_end);
     if (!udphdr) {
+	bpf_trace_printk("udphdr%d\n", udphdr);
+    	bpf_trace_printk("aaaaaaaaacccc");
+
         return TC_ACT_OK;
     }
 
